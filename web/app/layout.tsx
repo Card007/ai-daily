@@ -38,6 +38,13 @@ export default function RootLayout({
             </a>
             <div className="flex items-center gap-3">
               <a
+                href="/archives"
+                className="text-sm transition-colors"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                全部日报
+              </a>
+              <a
                 href="https://github.com/zhalice2011/ai-daily"
                 target="_blank"
                 rel="noopener noreferrer"

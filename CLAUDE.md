@@ -17,9 +17,10 @@ npx -y bun scripts/digest.ts --hours 48 --top-n 15 --lang zh --output ./output/d
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--hours <n>` | 48 | Time range for article filtering |
+| `--date <YYYY-MM-DD>` | — | Filter articles from a specific date (mutually exclusive with `--hours`) |
 | `--top-n <n>` | 15 | Number of top articles to include |
 | `--lang <zh\|en>` | zh | Output language |
-| `--output <path>` | `./digest-YYYYMMDD.md` | Output file path |
+| `--output <path>` | `./web/docs/YYYY_MM_DD.md` | Output file path |
 | `--fetch-only` | — | Only fetch RSS and save to cache file (no AI key needed) |
 | `--cache <path>` | — | Load articles from cache file, skip RSS fetching |
 

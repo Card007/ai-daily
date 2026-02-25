@@ -24,9 +24,10 @@ Usage:
 
 Options:
   --hours <n>     Time range in hours (default: 48)
+  --date <YYYY-MM-DD>  Filter articles from a specific date (mutually exclusive with --hours)
   --top-n <n>     Number of top articles to include (default: 15)
   --lang <lang>   Summary language: zh or en (default: zh)
-  --output <path> Output file path (default: ./digest-YYYYMMDD.md)
+  --output <path> Output file path (default: ./web/docs/YYYY_MM_DD.md)
   --fetch-only    Only fetch RSS and save to cache file (no AI needed)
   --cache <path>  Load articles from cache file, skip RSS fetching
   --help          Show this help
@@ -41,6 +42,9 @@ Examples:
   # Full pipeline (default)
   bun scripts/digest.ts --hours 24 --top-n 10 --lang zh
 
+  # Generate digest for a specific date
+  bun scripts/digest.ts --date 2025-02-20 --top-n 15 --lang zh
+
   # Two-stage: fetch first, then score (AI failures won't require re-fetching)
   bun scripts/digest.ts --hours 24 --fetch-only --output ./cache.json
   bun scripts/digest.ts --cache ./cache.json --top-n 15 --lang zh --output ./digest.md
@@ -50,6 +54,7 @@ Examples:
 
 function parseArgs(argv: string[]): {
   hours: number;
+  date: string;
   topN: number;
   lang: 'zh' | 'en';
   outputPath: string;
@@ -57,6 +62,7 @@ function parseArgs(argv: string[]): {
   cachePath: string;
 } {
   let hours = 48;
+  let date = '';
   let topN = 15;
   let lang: 'zh' | 'en' = 'zh';
   let outputPath = '';
@@ -67,6 +73,8 @@ function parseArgs(argv: string[]): {
     const arg = argv[i]!;
     if (arg === '--hours' && argv[i + 1]) {
       hours = parseInt(argv[++i]!, 10);
+    } else if (arg === '--date' && argv[i + 1]) {
+      date = argv[++i]!;
     } else if (arg === '--top-n' && argv[i + 1]) {
       topN = parseInt(argv[++i]!, 10);
     } else if (arg === '--lang' && argv[i + 1]) {
@@ -81,11 +89,12 @@ function parseArgs(argv: string[]): {
   }
 
   if (!outputPath) {
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    outputPath = fetchOnly ? `./cache-${dateStr}.json` : `./digest-${dateStr}.md`;
+    const dateStr = date || new Date().toISOString().slice(0, 10);
+    const fileDate = dateStr.replace(/-/g, '_');
+    outputPath = fetchOnly ? `./cache-${fileDate}.json` : `./web/docs/${fileDate}.md`;
   }
 
-  return { hours, topN, lang, outputPath, fetchOnly, cachePath };
+  return { hours, date, topN, lang, outputPath, fetchOnly, cachePath };
 }
 
 // ============================================================================
@@ -98,7 +107,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.includes('--help') || args.includes('-h')) printUsage();
 
-  const { hours, topN, lang, outputPath, fetchOnly, cachePath } = parseArgs(args);
+  const { hours, date, topN, lang, outputPath, fetchOnly, cachePath } = parseArgs(args);
 
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const openaiApiBase = process.env.OPENAI_API_BASE;
@@ -114,9 +123,24 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  if (date && !(/^\d{4}-\d{2}-\d{2}$/.test(date) && !isNaN(new Date(date + 'T00:00:00').getTime()))) {
+    console.error(`[digest] Error: Invalid --date format: "${date}". Use YYYY-MM-DD (e.g., 2025-02-20).`);
+    process.exit(1);
+  }
+
+  const hasExplicitHours = args.includes('--hours');
+  if (date && hasExplicitHours) {
+    console.error('[digest] Error: --date and --hours are mutually exclusive.');
+    process.exit(1);
+  }
+
   console.log(`[digest] === AI Daily Digest ===`);
   console.log(`[digest] Mode: ${fetchOnly ? 'fetch-only' : cachePath ? 'from-cache' : 'full'}`);
-  console.log(`[digest] Time range: ${hours} hours`);
+  if (date) {
+    console.log(`[digest] Date filter: ${date}`);
+  } else {
+    console.log(`[digest] Time range: ${hours} hours`);
+  }
   console.log(`[digest] Top N: ${topN}`);
   console.log(`[digest] Language: ${lang}`);
   console.log(`[digest] Output: ${outputPath}`);
@@ -155,15 +179,24 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    console.log(`[digest] Step 2/5: Filtering by time range (${hours} hours)...`);
-    const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
-    recentArticles = fetchResult.articles.filter(a => a.pubDate.getTime() > cutoffTime.getTime());
+    console.log(`[digest] Step 2/5: Filtering by ${date ? `date (${date})` : `time range (${hours} hours)`}...`);
 
-    console.log(`[digest] Found ${recentArticles.length} articles within last ${hours} hours`);
+    if (date) {
+      const dayStart = new Date(date + 'T00:00:00');
+      const dayEnd = new Date(date + 'T23:59:59.999');
+      recentArticles = fetchResult.articles.filter(a => a.pubDate.getTime() >= dayStart.getTime() && a.pubDate.getTime() <= dayEnd.getTime());
+    } else {
+      const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+      recentArticles = fetchResult.articles.filter(a => a.pubDate.getTime() > cutoffTime.getTime());
+    }
+
+    console.log(`[digest] Found ${recentArticles.length} articles ${date ? `on ${date}` : `within last ${hours} hours`}`);
 
     if (recentArticles.length === 0) {
-      console.error(`[digest] Error: No articles found within the last ${hours} hours.`);
-      console.error(`[digest] Try increasing --hours (e.g., --hours 168 for one week)`);
+      console.error(`[digest] Error: No articles found ${date ? `on ${date}` : `within the last ${hours} hours`}.`);
+      if (!date) {
+        console.error(`[digest] Try increasing --hours (e.g., --hours 168 for one week)`);
+      }
       process.exit(1);
     }
 
@@ -177,7 +210,7 @@ async function main(): Promise<void> {
       const cache: ArticleCache = {
         version: 1,
         createdAt: new Date().toISOString(),
-        params: { hours },
+        params: { hours, ...(date ? { date } : {}) },
         totalFeeds: cacheStats.totalFeeds,
         successFeeds: cacheStats.successFeeds,
         totalArticles: cacheStats.totalArticles,
@@ -260,6 +293,7 @@ async function main(): Promise<void> {
     totalArticles: cacheStats.totalArticles,
     filteredArticles: recentArticles.length,
     hours,
+    date: date || undefined,
     lang,
   });
 

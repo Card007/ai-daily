@@ -21,12 +21,12 @@ export default async function DigestPage({ params }: PageProps) {
     <div>
       <div className="mb-6 flex items-center gap-4">
         <a
-          href="/"
+          href="/archives"
           className="flex items-center gap-1 text-sm transition-colors"
           style={{ color: 'var(--text-muted)' }}
         >
           <ArrowLeft size={14} />
-          返回最新
+          全部日报
         </a>
         <h1 className="text-xl font-bold" style={{ color: 'var(--text)' }}>
           {displayDate} 日报

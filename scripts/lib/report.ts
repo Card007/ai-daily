@@ -10,10 +10,11 @@ export function generateDigestReport(articles: ScoredArticle[], highlights: stri
   totalArticles: number;
   filteredArticles: number;
   hours: number;
+  date?: string;
   lang: string;
 }): string {
   const now = new Date();
-  const dateStr = now.toISOString().split('T')[0];
+  const dateStr = stats.date || now.toISOString().split('T')[0];
 
   let report = `# \u{1F4F0} AI \u535A\u5BA2\u6BCF\u65E5\u7CBE\u9009 \u2014 ${dateStr}\n\n`;
   report += `> \u6765\u81EA Karpathy \u63A8\u8350\u7684 ${stats.totalFeeds} \u4E2A\u9876\u7EA7\u6280\u672F\u535A\u5BA2\uFF0CAI \u7CBE\u9009 Top ${articles.length}\n\n`;
@@ -73,7 +74,8 @@ export function generateDigestReport(articles: ScoredArticle[], highlights: stri
     }
   }
 
-  report += `*\u751F\u6210\u4E8E ${dateStr} ${now.toISOString().split('T')[1]?.slice(0, 5) || ''} | \u626B\u63CF ${stats.successFeeds} \u6E90 \u00B7 \u5171 ${stats.totalArticles} \u7BC7 \u00B7 ${stats.hours}h \u5185\u65B0\u53D1\u5E03 ${stats.filteredArticles} \u7BC7 \u00B7 \u7CBE\u9009 ${articles.length} \u7BC7*\n`;
+  const timeDesc = stats.date ? `${stats.date} \u5F53\u65E5` : `${stats.hours}h \u5185\u65B0\u53D1\u5E03`;
+  report += `*\u751F\u6210\u4E8E ${dateStr} ${now.toISOString().split('T')[1]?.slice(0, 5) || ''} | \u626B\u63CF ${stats.successFeeds} \u6E90 \u00B7 \u5171 ${stats.totalArticles} \u7BC7 \u00B7 ${timeDesc} ${stats.filteredArticles} \u7BC7 \u00B7 \u7CBE\u9009 ${articles.length} \u7BC7*\n`;
   report += `*\u57FA\u4E8E [Hacker News Popularity Contest 2025](https://refactoringenglish.com/tools/hn-popularity/) RSS \u6E90\u5217\u8868\uFF0C\u7531 [Andrej Karpathy](https://x.com/karpathy) \u63A8\u8350*\n`;
 
   return report;

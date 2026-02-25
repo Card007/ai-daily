@@ -1,5 +1,5 @@
 import { listDigests, getDigestContent } from '@/lib/docs';
-import { Inbox } from 'lucide-react';
+import { Inbox, Archive } from 'lucide-react';
 import DigestContent from '@/lib/digest-content';
 
 export default async function HomePage() {
@@ -27,5 +27,19 @@ export default async function HomePage() {
     );
   }
 
-  return <DigestContent content={content} />;
+  return (
+    <div>
+      <DigestContent content={content} />
+      <div className="mt-8 text-center">
+        <a
+          href="/archives"
+          className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm transition-colors"
+          style={{ color: 'var(--accent)', border: '1px solid var(--border)' }}
+        >
+          <Archive size={16} />
+          查看全部日报
+        </a>
+      </div>
+    </div>
+  );
 }
