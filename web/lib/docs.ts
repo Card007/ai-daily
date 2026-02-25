@@ -26,7 +26,14 @@ export async function listDigests(): Promise<DigestEntry[]> {
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export async function getDigestContent(date: string): Promise<string | null> {
+export async function getDigestContent(date: string, lang?: string): Promise<string | null> {
+  if (lang === 'en') {
+    try {
+      return await readFile(join(DOCS_DIR, `${date}_en.md`), 'utf-8');
+    } catch {
+      // fallback to Chinese version
+    }
+  }
   try {
     return await readFile(join(DOCS_DIR, `${date}.md`), 'utf-8');
   } catch {

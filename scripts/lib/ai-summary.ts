@@ -2,6 +2,82 @@ import type { Article, AIClient, ScoredArticle, SummaryResult } from './types.ts
 import { AI_BATCH_SIZE, MAX_CONCURRENT_AI, AI_MAX_RETRIES } from './types.ts';
 import { parseJsonResponse } from './ai-client.ts';
 
+function buildSummaryPromptZh(
+  articlesList: string
+): string {
+  return `你是一个技术内容摘要专家。请为以下文章完成三件事：
+
+1. **中文标题** (titleZh): 将英文标题翻译成自然的中文。如果原标题已经是中文则保持不变。
+2. **摘要** (summary): 4-6 句话的结构化摘要，让读者不点进原文也能了解核心内容。包含：
+   - 文章讨论的核心问题或主题（1 句）
+   - 关键论点、技术方案或发现（2-3 句）
+   - 结论或作者的核心观点（1 句）
+3. **推荐理由** (reason): 1 句话说明"为什么值得读"，区别于摘要（摘要说"是什么"，推荐理由说"为什么"）。
+
+请用中文撰写摘要和推荐理由。如果原文是英文，请翻译为中文。标题翻译也用中文。
+
+摘要要求：
+- 直接说重点，不要用"本文讨论了..."、"这篇文章介绍了..."这种开头
+- 包含具体的技术名词、数据、方案名称或观点
+- 保留关键数字和指标（如性能提升百分比、用户数、版本号等）
+- 如果文章涉及对比或选型，要点出比较对象和结论
+- 目标：读者花 30 秒读完摘要，就能决定是否值得花 10 分钟读原文
+
+## 待摘要文章
+
+${articlesList}
+
+请严格按 JSON 格式返回：
+{
+  "results": [
+    {
+      "index": 0,
+      "titleZh": "中文翻译的标题",
+      "summary": "摘要内容...",
+      "reason": "推荐理由..."
+    }
+  ]
+}`;
+}
+
+function buildSummaryPromptEn(
+  articlesList: string
+): string {
+  return `You are a technical content summarization expert. For each article below, produce three things:
+
+1. **Localized title** (titleZh): If the original title is in a non-English language, translate it into natural English. If already English, keep it as-is.
+2. **Summary** (summary): A structured summary of 4-6 sentences so readers can grasp the core content without clicking through. Include:
+   - The core problem or topic discussed (1 sentence)
+   - Key arguments, technical approaches, or findings (2-3 sentences)
+   - Conclusion or the author's main takeaway (1 sentence)
+3. **Recommendation reason** (reason): 1 sentence explaining "why this is worth reading", distinct from the summary (summary = "what it is", reason = "why it matters").
+
+ALL output — titleZh, summary, reason — MUST be in English. Do NOT use any Chinese characters.
+
+Summary requirements:
+- Get to the point directly; do NOT start with "This article discusses..." or "The author introduces..."
+- Include specific technical terms, data, solution names, or viewpoints
+- Preserve key numbers and metrics (performance improvements, user counts, version numbers, etc.)
+- If the article involves comparisons, state the compared items and the conclusion
+- Goal: a reader spends 30 seconds on the summary and can decide whether to spend 10 minutes on the original
+
+## Articles to summarize
+
+${articlesList}
+
+Return strictly as JSON:
+{
+  "results": [
+    {
+      "index": 0,
+      "titleZh": "English title here",
+      "summary": "Summary content...",
+      "reason": "Recommendation reason..."
+    }
+  ]
+}`;
+}
+
 function buildSummaryPrompt(
   articles: Array<{ index: number; title: string; description: string; sourceName: string; link: string }>,
   lang: 'zh' | 'en'
@@ -10,43 +86,7 @@ function buildSummaryPrompt(
     `Index ${a.index}: [${a.sourceName}] ${a.title}\nURL: ${a.link}\n${a.description.slice(0, 800)}`
   ).join('\n\n---\n\n');
 
-  const langInstruction = lang === 'zh'
-    ? '\u8BF7\u7528\u4E2D\u6587\u64B0\u5199\u6458\u8981\u548C\u63A8\u8350\u7406\u7531\u3002\u5982\u679C\u539F\u6587\u662F\u82F1\u6587\uFF0C\u8BF7\u7FFB\u8BD1\u4E3A\u4E2D\u6587\u3002\u6807\u9898\u7FFB\u8BD1\u4E5F\u7528\u4E2D\u6587\u3002'
-    : 'Write summaries, reasons, and title translations in English.';
-
-  return `\u4F60\u662F\u4E00\u4E2A\u6280\u672F\u5185\u5BB9\u6458\u8981\u4E13\u5BB6\u3002\u8BF7\u4E3A\u4EE5\u4E0B\u6587\u7AE0\u5B8C\u6210\u4E09\u4EF6\u4E8B\uFF1A
-
-1. **\u4E2D\u6587\u6807\u9898** (titleZh): \u5C06\u82F1\u6587\u6807\u9898\u7FFB\u8BD1\u6210\u81EA\u7136\u7684\u4E2D\u6587\u3002\u5982\u679C\u539F\u6807\u9898\u5DF2\u7ECF\u662F\u4E2D\u6587\u5219\u4FDD\u6301\u4E0D\u53D8\u3002
-2. **\u6458\u8981** (summary): 4-6 \u53E5\u8BDD\u7684\u7ED3\u6784\u5316\u6458\u8981\uFF0C\u8BA9\u8BFB\u8005\u4E0D\u70B9\u8FDB\u539F\u6587\u4E5F\u80FD\u4E86\u89E3\u6838\u5FC3\u5185\u5BB9\u3002\u5305\u542B\uFF1A
-   - \u6587\u7AE0\u8BA8\u8BBA\u7684\u6838\u5FC3\u95EE\u9898\u6216\u4E3B\u9898\uFF081 \u53E5\uFF09
-   - \u5173\u952E\u8BBA\u70B9\u3001\u6280\u672F\u65B9\u6848\u6216\u53D1\u73B0\uFF082-3 \u53E5\uFF09
-   - \u7ED3\u8BBA\u6216\u4F5C\u8005\u7684\u6838\u5FC3\u89C2\u70B9\uFF081 \u53E5\uFF09
-3. **\u63A8\u8350\u7406\u7531** (reason): 1 \u53E5\u8BDD\u8BF4\u660E\u201C\u4E3A\u4EC0\u4E48\u503C\u5F97\u8BFB\u201D\uFF0C\u533A\u522B\u4E8E\u6458\u8981\uFF08\u6458\u8981\u8BF4\u201C\u662F\u4EC0\u4E48\u201D\uFF0C\u63A8\u8350\u7406\u7531\u8BF4\u201C\u4E3A\u4EC0\u4E48\u201D\uFF09\u3002
-
-${langInstruction}
-
-\u6458\u8981\u8981\u6C42\uFF1A
-- \u76F4\u63A5\u8BF4\u91CD\u70B9\uFF0C\u4E0D\u8981\u7528\u201C\u672C\u6587\u8BA8\u8BBA\u4E86...\u201D\u3001\u201C\u8FD9\u7BC7\u6587\u7AE0\u4ECB\u7ECD\u4E86...\u201D\u8FD9\u79CD\u5F00\u5934
-- \u5305\u542B\u5177\u4F53\u7684\u6280\u672F\u540D\u8BCD\u3001\u6570\u636E\u3001\u65B9\u6848\u540D\u79F0\u6216\u89C2\u70B9
-- \u4FDD\u7559\u5173\u952E\u6570\u5B57\u548C\u6307\u6807\uFF08\u5982\u6027\u80FD\u63D0\u5347\u767E\u5206\u6BD4\u3001\u7528\u6237\u6570\u3001\u7248\u672C\u53F7\u7B49\uFF09
-- \u5982\u679C\u6587\u7AE0\u6D89\u53CA\u5BF9\u6BD4\u6216\u9009\u578B\uFF0C\u8981\u70B9\u51FA\u6BD4\u8F83\u5BF9\u8C61\u548C\u7ED3\u8BBA
-- \u76EE\u6807\uFF1A\u8BFB\u8005\u82B1 30 \u79D2\u8BFB\u5B8C\u6458\u8981\uFF0C\u5C31\u80FD\u51B3\u5B9A\u662F\u5426\u503C\u5F97\u82B1 10 \u5206\u949F\u8BFB\u539F\u6587
-
-## \u5F85\u6458\u8981\u6587\u7AE0
-
-${articlesList}
-
-\u8BF7\u4E25\u683C\u6309 JSON \u683C\u5F0F\u8FD4\u56DE\uFF1A
-{
-  "results": [
-    {
-      "index": 0,
-      "titleZh": "\u4E2D\u6587\u7FFB\u8BD1\u7684\u6807\u9898",
-      "summary": "\u6458\u8981\u5185\u5BB9...",
-      "reason": "\u63A8\u8350\u7406\u7531..."
-    }
-  ]
-}`;
+  return lang === 'en' ? buildSummaryPromptEn(articlesList) : buildSummaryPromptZh(articlesList);
 }
 
 export async function summarizeArticles(
@@ -121,19 +161,30 @@ export async function generateHighlights(
     `${i + 1}. [${a.category}] ${a.titleZh || a.title} \u2014 ${a.summary.slice(0, 100)}`
   ).join('\n');
 
-  const langNote = lang === 'zh' ? '\u7528\u4E2D\u6587\u56DE\u7B54\u3002' : 'Write in English.';
+  const prompt = lang === 'en'
+    ? `Based on the following curated tech articles of the day, write a 3-5 sentence "Today's Highlights" summary.
 
-  const prompt = `\u6839\u636E\u4EE5\u4E0B\u4ECA\u65E5\u7CBE\u9009\u6280\u672F\u6587\u7AE0\u5217\u8868\uFF0C\u5199\u4E00\u6BB5 3-5 \u53E5\u8BDD\u7684\u201C\u4ECA\u65E5\u770B\u70B9\u201D\u603B\u7ED3\u3002
-\u8981\u6C42\uFF1A
-- \u63D0\u70BC\u51FA\u4ECA\u5929\u6280\u672F\u5708\u7684 2-3 \u4E2A\u4E3B\u8981\u8D8B\u52BF\u6216\u8BDD\u9898
-- \u4E0D\u8981\u9010\u7BC7\u5217\u4E3E\uFF0C\u8981\u505A\u5B8F\u89C2\u5F52\u7EB3
-- \u98CE\u683C\u7B80\u6D01\u6709\u529B\uFF0C\u50CF\u65B0\u95FB\u5BFC\u8BED
-${langNote}
+Requirements:
+- Distill 2-3 major trends or themes from today's tech scene
+- Do NOT list articles one by one; synthesize at a macro level
+- Style: concise and punchy, like a news lede
+- Write ENTIRELY in English. Do NOT use any Chinese characters.
 
-\u6587\u7AE0\u5217\u8868\uFF1A
+Articles:
 ${articleList}
 
-\u76F4\u63A5\u8FD4\u56DE\u7EAF\u6587\u672C\u603B\u7ED3\uFF0C\u4E0D\u8981 JSON\uFF0C\u4E0D\u8981 markdown \u683C\u5F0F\u3002`;
+Return plain text only. No JSON, no markdown formatting.`
+    : `根据以下今日精选技术文章列表，写一段 3-5 句话的"今日看点"总结。
+要求：
+- 提炼出今天技术圈的 2-3 个主要趋势或话题
+- 不要逐篇列举，要做宏观归纳
+- 风格简洁有力，像新闻导语
+用中文回答。
+
+文章列表：
+${articleList}
+
+直接返回纯文本总结，不要 JSON，不要 markdown 格式。`;
 
   try {
     const text = await aiClient.call(prompt);

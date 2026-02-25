@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Newspaper } from 'lucide-react';
 import ThemeToggle from './theme-toggle';
+import LangToggle from './lang-toggle';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -42,7 +44,7 @@ export default function RootLayout({
                 className="text-sm transition-colors"
                 style={{ color: 'var(--text-muted)' }}
               >
-                全部日报
+                Archives
               </a>
               <a
                 href="https://github.com/zhalice2011/ai-daily"
@@ -54,6 +56,9 @@ export default function RootLayout({
                 GitHub
               </a>
               <ThemeToggle />
+              <Suspense>
+                <LangToggle />
+              </Suspense>
             </div>
           </div>
         </header>

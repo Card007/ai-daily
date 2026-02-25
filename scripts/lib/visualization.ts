@@ -9,7 +9,7 @@ export function humanizeTime(pubDate: Date): string {
   return `${mm}-${dd} ${hh}:${min}`;
 }
 
-export function generateKeywordBarChart(articles: ScoredArticle[]): string {
+export function generateKeywordBarChart(articles: ScoredArticle[], lang: string = 'zh'): string {
   const kwCount = new Map<string, number>();
   for (const a of articles) {
     for (const kw of a.keywords) {
@@ -30,16 +30,16 @@ export function generateKeywordBarChart(articles: ScoredArticle[]): string {
 
   let chart = '```mermaid\n';
   chart += `xychart-beta horizontal\n`;
-  chart += `    title "\u9AD8\u9891\u5173\u952E\u8BCD"\n`;
+  chart += `    title "${lang === 'en' ? 'Top Keywords' : '高频关键词'}"\n`;
   chart += `    x-axis [${labels}]\n`;
-  chart += `    y-axis "\u51FA\u73B0\u6B21\u6570" 0 --> ${maxVal + 2}\n`;
+  chart += `    y-axis "${lang === 'en' ? 'Count' : '出现次数'}" 0 --> ${maxVal + 2}\n`;
   chart += `    bar [${values}]\n`;
   chart += '```\n';
 
   return chart;
 }
 
-export function generateCategoryPieChart(articles: ScoredArticle[]): string {
+export function generateCategoryPieChart(articles: ScoredArticle[], lang: string = 'zh'): string {
   const catCount = new Map<CategoryId, number>();
   for (const a of articles) {
     catCount.set(a.category, (catCount.get(a.category) || 0) + 1);
@@ -51,10 +51,11 @@ export function generateCategoryPieChart(articles: ScoredArticle[]): string {
 
   let chart = '```mermaid\n';
   chart += `pie showData\n`;
-  chart += `    title "\u6587\u7AE0\u5206\u7C7B\u5206\u5E03"\n`;
+  chart += `    title "${lang === 'en' ? 'Article Categories' : '文章分类分布'}"\n`;
   for (const [cat, count] of sorted) {
     const meta = CATEGORY_META[cat];
-    chart += `    "${meta.emoji} ${meta.label}" : ${count}\n`;
+    const catLabel = lang === 'en' ? meta.labelEn : meta.label;
+    chart += `    "${meta.emoji} ${catLabel}" : ${count}\n`;
   }
   chart += '```\n';
 

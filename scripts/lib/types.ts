@@ -18,13 +18,13 @@ export const AI_MAX_RETRIES = 2;
 
 export type CategoryId = 'ai-ml' | 'security' | 'engineering' | 'tools' | 'opinion' | 'other';
 
-export const CATEGORY_META: Record<CategoryId, { emoji: string; label: string }> = {
-  'ai-ml':       { emoji: '\u{1F916}', label: 'AI / ML' },
-  'security':    { emoji: '\u{1F512}', label: '\u5B89\u5168' },
-  'engineering': { emoji: '\u2699\uFE0F', label: '\u5DE5\u7A0B' },
-  'tools':       { emoji: '\u{1F6E0}', label: '\u5DE5\u5177 / \u5F00\u6E90' },
-  'opinion':     { emoji: '\u{1F4A1}', label: '\u89C2\u70B9 / \u6742\u8C08' },
-  'other':       { emoji: '\u{1F4DD}', label: '\u5176\u4ED6' },
+export const CATEGORY_META: Record<CategoryId, { emoji: string; label: string; labelEn: string }> = {
+  'ai-ml':       { emoji: '\u{1F916}', label: 'AI / ML',       labelEn: 'AI / ML' },
+  'security':    { emoji: '\u{1F512}', label: '\u5B89\u5168',         labelEn: 'Security' },
+  'engineering': { emoji: '\u2699\uFE0F', label: '\u5DE5\u7A0B',         labelEn: 'Engineering' },
+  'tools':       { emoji: '\u{1F6E0}', label: '\u5DE5\u5177 / \u5F00\u6E90', labelEn: 'Tools / OSS' },
+  'opinion':     { emoji: '\u{1F4A1}', label: '\u89C2\u70B9 / \u6742\u8C08', labelEn: 'Opinion' },
+  'other':       { emoji: '\u{1F4DD}', label: '\u5176\u4ED6',         labelEn: 'Other' },
 };
 
 export interface Article {

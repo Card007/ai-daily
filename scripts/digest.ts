@@ -91,7 +91,8 @@ function parseArgs(argv: string[]): {
   if (!outputPath) {
     const dateStr = date || new Date().toISOString().slice(0, 10);
     const fileDate = dateStr.replace(/-/g, '_');
-    outputPath = fetchOnly ? `./cache-${fileDate}.json` : `./web/docs/${fileDate}.md`;
+    const langSuffix = lang === 'en' ? '_en' : '';
+    outputPath = fetchOnly ? `./cache-${fileDate}.json` : `./web/docs/${fileDate}${langSuffix}.md`;
   }
 
   return { hours, date, topN, lang, outputPath, fetchOnly, cachePath };

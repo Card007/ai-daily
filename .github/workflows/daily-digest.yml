@@ -32,6 +32,11 @@ jobs:
             --top-n 30 \
             --lang zh \
             --output "./web/docs/${DATE}.md"
+          bun scripts/digest.ts \
+            --hours 28 \
+            --top-n 30 \
+            --lang en \
+            --output "./web/docs/${DATE}_en.md"
 
       - name: Commit and push
         run: |
